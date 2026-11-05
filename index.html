@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>実践マネジメント・ワークショップ 統合ポータル</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 & ReactDOM 18 -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel Standalone (JSXトランスパイラ) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    /* ルビの微調整 */
+    ruby rt {
+      font-size: 0.6em;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // =========================================================================
+    // 1. SVG アイコンコンポーネント群（外部依存なし・高視認性）
+    // =========================================================================
+    const IconBase = ({ children, className = "w-6 h-6", ...props }) => (
+      <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" {...props}>
+        {children}
+      </svg>
+    );
+
+    const Factory = (p) => <IconBase {...p}><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/></IconBase>;
+    const HelpCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconBase>;
+    const ShoppingCart = (p) => <IconBase {...p}><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></IconBase>;
+    const PieChart = (p) => <IconBase {...p}><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></IconBase>;
+    const Compass = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></IconBase>;
+    const Scissors = (p) => <IconBase {...p}><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></IconBase>;
+    const Flame = (p) => <IconBase {...p}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></IconBase>;
+    const Home = (p) => <IconBase {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></IconBase>;
+    const RotateCcw = (p) => <IconBase {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconBase>;
+    const ArrowRight = (p) => <IconBase {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconBase>;
+    const ChevronRight = (p) => <IconBase {...p}><polyline points="9 18 15 12 9 6"/></IconBase>;
+    const CheckCircle2 = (p) => <IconBase {...p}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></IconBase>;
+    const XCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></IconBase>;
+    const AlertTriangle = (p) => <IconBase {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconBase>;
+    const Sparkles = (p) => <IconBase {...p}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></IconBase>;
+    const Trophy = (p) => <IconBase {...p}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"/><path d="M6 4h12v7a6 6 0 0 1-12 0V4Z"/></IconBase>;
+
+    // =========================================================================
+    // 2. データ定義（全モジュール共有）
+    // =========================================================================
+    const FACTORY_ORDERS = [
+      { id: 'A', name: '大手向け量産大型パッキン', sales: 1000, vc: 800, hours: 120, desc: '月産5万個。売上最大だが材料費と工場稼働を圧迫する。' },
+      { id: 'B', name: '産業機械向け規格Oリング', sales: 600, vc: 300, hours: 80, desc: '定番の中ロット品。売上・手間のバランスが良い中核品。' },
+      { id: 'C', name: '医療用・精密特注パッキン', sales: 300, vc: 90, hours: 40, desc: 'フッ素ゴム配合。小ロットだが極めて高い限界利益率。' }
+    ];
+
+    const QUIZ_DATA = [
+      { q: "生ゴムの仕入代（天然ゴム・合成ゴム）", a: "変動費", practical: false, exp: "生産量に完全に連動して仕入れが増える典型的な変動費です。" },
+      { q: "製品梱包用の段ボール箱・テープ代", a: "固定費", practical: true, theory: "理屈上は出荷数に連動する変動費です。", exp: "段ボールやテープを1箱ずつ数えると伝票管理の手間が膨大になります。実務では「消耗品費（固定費）」に割り切ります。" },
+      { q: "営業車に入れたガソリン代", a: "固定費", practical: true, theory: "走った分だけかかるので理屈は変動費です。", exp: "走行距離を製品ごとに厳密配賦するのは非現実的です。実務では「車両費（固定費）」で一括処理します。" },
+      { q: "加硫プレス機の月額リース料", a: "固定費", practical: false, exp: "生産量に関わらず契約で毎月定額が引き落とされる固定費です。" },
+      { q: "金型の専用サビ止めスプレー代", a: "固定費", practical: true, theory: "型替え回数に比例するので理屈は変動費です。", exp: "少額備品は管理コストを省くため「消耗品費（固定費）」に含めるのが実務の定石です。" },
+      { q: "バリ取り作業の外注加工費（1個◯円）", a: "変動費", practical: false, exp: "加工個数に完全に比例して外注費が発生する明確な変動費です。" },
+      { q: "工場全体の水道代", a: "固定費", practical: true, theory: "使った分だけメーターが回るので理屈は変動費です。", exp: "工場に1つのメーターしかない場合、製品別の按分は不可能です。水道光熱費（固定費）で処理します。" },
+      { q: "工場長の基本給", a: "固定費", practical: false, exp: "工場の稼働状況に関わらず毎月一定額が支払われる固定費です。" },
+      { q: "製品出荷時のトラック運賃", a: "変動費", practical: false, exp: "出荷する個数や重量に応じて運送会社への支払いが増える変動費です。" },
+      { q: "金型を預けている外部倉庫の月額保管料", a: "固定費", practical: false, exp: "使ったかどうかに関わらず、毎月定額が発生する固定費です。" }
+    ];
+
+    const PURCHASING_DATA = [
+      {
+        title: "第1問：副資材・消耗品の購買改革",
+        desc: "手袋、カッター刃、テープ等を現場スタッフが各自近所のホームセンターで都度購入しており、価格も手間もかさんでいます。最善の打ち手は？",
+        opts: [
+          { text: "数百円の消耗品でも毎回3社相見積もりを取り最安店へ行かせる", p: -10, c: -20, best: false, fb: "少額品に社員の人件費をかけるのは本末転倒（管理コスト肥大化）です。" },
+          { text: "共同購買プラットフォーム（SOLOELやモノタロウ等）を一括導入し窓口を一本化する", p: 25, c: 25, best: true, fb: "大正解！中小企業でも大企業並みのスケールメリットを受けられ、伝票処理も劇的に減ります。" },
+          { text: "消耗品購入禁止令を出しボロボロになるまで使い回させる", p: -30, c: -30, best: false, fb: "現場の能率低下や異物混入事故を招く最悪のコストカットです。" }
+        ]
+      },
+      {
+        title: "第2問：大量購買（まとめ買い）のリスクの勘違い",
+        desc: "生ゴム1年分の一括購入で単価10%引きを提案されました。社内でリスクを議論する際、【誤っている認識（実際にはリスクではないもの）】はどれですか？",
+        opts: [
+          { text: "手元資金が在庫に固定され新たな挑戦ができなくなるリスクや外部倉庫費用", p: -10, c: -10, best: false, fb: "これは正真正銘の本物のリスクです！「リスクとして誤っているもの」を選びましょう。" },
+          { text: "長期保管によるゴムの品質劣化や、置き場が増えてモノを探す時間（能率低下）のリスク", p: -10, c: -10, best: false, fb: "これも現場で日常的に起きる本物のリスクです！「リスクとして誤っているもの」を選びましょう。" },
+          { text: "購入した時点で全額がその月の費用になり、帳簿上の利益が一気に赤字になるリスク", p: 30, c: 30, best: true, fb: "大正解！材料は使って売れるまで費用にならず「資産（在庫）」になります。つまり『帳簿は黒字なのに手元現金だけ消える』のがまとめ買いの真の罠（黒字倒産）です！" }
+        ]
+      },
+      {
+        title: "第3問：内示情報（フォーキャスト）の共有交渉",
+        desc: "仕入先から「毎月突発発注されるため特急残業で採算が合わない」と相談されました。Win-Winの打ち手は？",
+        opts: [
+          { text: "「うちも急に言われるんだ」と突っぱね、徹底的に相見積もりを取り続ける", p: -15, c: -15, best: false, fb: "買い叩きです。サプライヤーとの信頼が崩れ、緊急時に融通が利かなくなります。" },
+          { text: "3ヶ月先の生産内示を毎月共有し、計画生産してもらう代わりに5%値下げしてもらう", p: 35, c: 35, best: true, fb: "見事です！相手の段取りコストを下げることで、双方が納得の値下げが実現します。" },
+          { text: "納期遅れに厳しい金銭ペナルティを課す契約に改定する", p: -10, c: -10, best: false, fb: "相手のコストは下がらず、リスクを見越して見積単価が上がってしまいます。" }
+        ]
+      },
+      {
+        title: "第4問：標準規格への統一（VE提案）",
+        desc: "金型保護シートを「自社専用の特注カットサイズ」で仕入れているため割高です。どう改善しますか？",
+        opts: [
+          { text: "特注サイズのまま「長年の付き合いだから1割引いてくれ」と頼む", p: 0, c: 0, best: false, fb: "相手も専用ラインを動かしているため、単なる値下げには応じられません。" },
+          { text: "仕入先が大量生産している「標準サイズ（規格品）」を買い、自社側で工夫して使う", p: 30, c: 30, best: true, fb: "大正解（VE提案）！相手の量産規格に合わせるだけで劇的なコスト削減になります。" },
+          { text: "耐熱性の低い安価な粗悪シートを海外から探して使う", p: -40, c: -40, best: false, fb: "成形不良や金型破損を招き、不良損失が値引き額を吹き飛ばします。" }
+        ]
+      },
+      {
+        title: "第5問：早期払いの罠と防衛策（瑕疵担保責任）",
+        desc: "仕入先から「注文時前払いなら代金5%引く」と打診されました。この時に【最も警戒すべきリスク】は？",
+        opts: [
+          { text: "納品されたゴムに硬度不良や欠陥があった場合、支払い済みのため返金・返品交渉が極めて困難になること", p: 30, c: 30, best: true, fb: "完璧です！買掛金の真の価値は検収合格まで支払いを留保することです。早期払いをするなら「受入検査合格の直後に決済する」特約が鉄則です。" },
+          { text: "手元の現金が一時的に減り銀行格付けが直ちに下落すること", p: 0, c: 0, best: false, fb: "余剰資金の範囲内であれば即時格下げには直結しません。" },
+          { text: "5%では少ないので相手の足元を見て15%引かせないといけないこと", p: -20, c: -20, best: false, fb: "リスクの本質は値引率ではなく「万が一の不良時の品質保全」です。" }
+        ]
+      }
+    ];
+
+    const SALES_DATA = [
+      {
+        step: "【A】認知（Attention）",
+        sit: "ものづくり先端展示会に出展。新型ロボット関節用パッキンを探す大手設計リーダーが通りかかりました。",
+        opts: [
+          { text: "「ゴム成形なら何でも格安で作れます！」と総合カタログを配る（御用聞き型）", prob: 5, rate: -10, best: false, fb: "「何でもできる」は「何も得意ではない」と同じ。設計者は素通りしました。" },
+          { text: "「200℃×強耐油でゴムが千切れて困る設計者様へ」と破損サンプル＆独自配合ゴムを展示", prob: 35, rate: 15, best: true, fb: "設計者が足を止めました！「まさに今困っていたんだ！」と濃いアポイントを獲得！" },
+          { text: "高級ノベルティを配って名刺の枚数だけを大量に集める", prob: -5, rate: 0, best: false, fb: "景品目当ての来場者ばかりで費用倒れに終わりました。" }
+        ]
+      },
+      {
+        step: "【I & D】興味・欲求（Interest & Desire）",
+        sit: "設計リーダーから「ロボット関節パッキンの仕様が決まらない。一度打合せに来てほしい」と声がかかりました。",
+        opts: [
+          { text: "「図面が完成したらすぐに見積もりますので送ってください」と伝える（図面待ち型）", prob: -10, rate: -15, best: false, fb: "図面が完成してからでは相見積もり価格競争に巻き込まれます。" },
+          { text: "「図面を引く前に環境をヒアリングさせてください。自社配合テストゴムを3種持参します」（レシピ提案）", prob: 30, rate: 20, best: true, fb: "設計者が大喜び！自社が主導して仕様を固め、競合を完全に排除できました。" },
+          { text: "汎用Oリングのカタログを置いて「この中から選んでください」と伝える", prob: -25, rate: -5, best: false, fb: "過酷な新型ロボットに使えるはずがなく、頼りないと見限られました。" }
+        ]
+      },
+      {
+        step: "【M】記憶・差別化（Memory & VE提案）",
+        sit: "顧客から届いた暫定図面案は、角が直角（ピン角）で金型費が高く、成形亀裂も出やすい形状でした。",
+        opts: [
+          { text: "顧客の図面通りに高い金型代で見積もりを出す（無言追従型）", prob: -15, rate: -5, best: false, fb: "金型代が高すぎて顧客の予算オーバー、案件が凍結しかけました。" },
+          { text: "「角にR1.5mmをつける形状変更をご提案。金型費30%削減、耐久性2倍になります」（VE提案）", prob: 25, rate: 15, best: true, fb: "設計者が大絶賛！社内稟議で貴社が「本命サプライヤー」に確定しました。" },
+          { text: "「直角なんてゴムを知らない人が描く図面だ」と突き返す", prob: -35, rate: 0, best: false, fb: "設計者のプライドを傷つけ、関係を断絶されました。" }
+        ]
+      },
+      {
+        step: "【A】行動・成約（Action & Closing）",
+        sit: "最後に購買部が登場。「他社見積もりより25%高い。他社並みに値引きせよ」と迫ってきました。",
+        opts: [
+          { text: "失注が怖いので言われた通り25%値引きして契約する（安易な値引き）", prob: 10, rate: -30, best: false, fb: "成約はしましたが利益が出ず、現場が忙しいだけの「下請けの悲劇」に逆戻りです。" },
+          { text: "「単価は維持させてください。その代わり試作納期を通常4週から【最短10日】で納品保証します」（バリュープライシング）", prob: 20, rate: 10, best: true, fb: "購買部が納得！新製品発売の前倒し価値が認められ、値引きゼロ満額受注（粗利70%）達成！" },
+          { text: "「1円も引かないし条件変更も拒否する」と突っぱねる", prob: -40, rate: 5, best: false, fb: "購買部の面子を潰し、土壇場で失注してしまいました。" }
+        ]
+      }
+    ];
+
+    const ECRS_DATA = [
+      { title: "第1問：バリ取り作業の根本改善", sit: "ゴムパッキンの外周バリをハサミで切っています。技術者が「バリそのものが出ない金型」を開発し、バリ取り工程を全廃しました。これはどれ？", ans: "E", name: "E：排除（Eliminate）" },
+      { title: "第2問：冷却と検品の一体化", sit: "水槽での冷却と検査台での目視確認を合体させ、水から引き上げる動作の最中に手元で目視検査を同時に完了させました。これはどれ？", ans: "C", name: "C：結合（Combine）" },
+      { title: "第3問：プレス機の段取り短縮", sit: "成形機が動いている15分の間に、前もって次の金型を予熱し原料も計量してスタンバイしておく（外段取り化）ようにしました。これはどれ？", ans: "R", name: "R：入替（Rearrange）" },
+      { title: "第4問：ハサミから専用治具への進化", sit: "手作業で切っていた突起を、足でペダルを踏むだけで一瞬で切れる「専用打ち抜き治具」を自作して作業時間を1/20に短縮しました。これはどれ？", ans: "S", name: "S：簡素化（Simplify）" },
+      { title: "第5問：ECRSの絶対鉄則", sit: "現場改善を検討する際、真っ先に高価な道具を買うのではなく、守るべき正しい検討順序はどれですか？", ans: "PRIORITY", name: "E → C → R → S の順序" }
+    ];
+
+    const DEFECT_STEPS = [
+      { step: 1, title: '客先クレーム ＆ 逆デリバリー（回収）', cost: 8, hours: 8, desc: '往復トラック代と引き取り作業で8万円・8人時が消滅。' },
+      { step: 2, title: '役員・営業の謝罪訪問 ＆ 始末書作成', cost: 15, hours: 24, desc: '幹部が客先へ謝罪。始末書・なぜなぜ分析のペーパーワークで延べ24人時が忙殺される。' },
+      { step: 3, title: '不良品の廃棄処分 ＆ 原材料全損', cost: 25, hours: 4, desc: '加硫ゴムは再利用不可能！材料代20万円が全損、産廃委託費で5万円の現金流出。' },
+      { step: 4, title: '特急再生産（別ライン停止・深夜残業）', cost: 32, hours: 36, desc: '別ロットを止めて割り込み生産。材料の再購入代20万＋深夜残業手当・光熱費12万円が追加発生。' },
+      { step: 5, title: '緊急再デリバリー（赤帽チャーター便）', cost: 6, hours: 4, desc: '客先工場の立ち上げに合わせ、深夜の専属特急便を手配して追加運賃6万円が自社負担。' }
+    ];
+
+    // =========================================================================
+    // 3. メインアプリケーション（ルーティング）
+    // =========================================================================
+    function App() {
+      const [currentView, setCurrentView] = useState('portal');
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          {currentView === 'portal' && <PortalView onNav={setCurrentView} />}
+          {currentView === 'factory' && <FactoryView onBack={() => setCurrentView('portal')} />}
+          {currentView === 'quiz' && <QuizView onBack={() => setCurrentView('portal')} />}
+          {currentView === 'purchasing' && <PurchasingView onBack={() => setCurrentView('portal')} />}
+          {currentView === 'productmix' && <ProductMixView onBack={() => setCurrentView('portal')} />}
+          {currentView === 'sales' && <SalesView onBack={() => setCurrentView('portal')} />}
+          {currentView === 'ecrs' && <EcrsView onBack={() => setCurrentView('portal')} />}
+          {currentView === 'defect' && <DefectView onBack={() => setCurrentView('portal')} />}
+        </div>
+      );
+    }
+
+    // --- ポータル画面 ---
+    function PortalView({ onNav }) {
+      const menu = [
+        { id: 'factory', cat: '事前・事後ゲーム', title: 'ゴム工場の逆転劇', sub: '売上至上主義の罠と、管理会計による黒字化を10分で体感', icon: Factory, color: 'bg-blue-600' },
+        { id: 'quiz', cat: 'パート1：共通言語', title: '固変分解クイズ（実務版）', sub: '理屈と現場のギャップを埋める！「勘定科目法」による仕分け特訓', icon: HelpCircle, color: 'bg-slate-800' },
+        { id: 'purchasing', cat: '打ち手①：購買改革', title: '購買改革シミュレーション', sub: '共同購買、内示共有、標準化VE、早期払い時の瑕疵担保リスク', icon: ShoppingCart, color: 'bg-emerald-600' },
+        { id: 'productmix', cat: '打ち手①：売り方', title: 'プロダクトミックス体験', sub: '「同じ売上1000万で利益激変スライダー」＆「薄利多売の罠」実験', icon: PieChart, color: 'bg-indigo-600' },
+        { id: 'sales', cat: '打ち手②：売上拡大', title: '技術提案型営業アドベンチャー', sub: 'AIDMAモデルに沿って、図面待ち・安売りから脱却し高粗利満額受注', icon: Compass, color: 'bg-purple-600' },
+        { id: 'ecrs', cat: '打ち手③：費用削減', title: 'ECRS（イクルス）原則マスター', sub: '現場のムダ取り4原則の検討順序（E→C→R→S）とSVG図解', icon: Scissors, color: 'bg-amber-600' },
+        { id: 'defect', cat: '打ち手③：廃棄ゼロ化', title: '廃棄ゼロ化・返品コストシミュレーター', sub: '作成ミス1回が引き起こす「逆デリバリー・謝罪始末書・深夜残業」の悪夢', icon: Flame, color: 'bg-rose-600' }
+      ];
+
+      return (
+        <div className="bg-slate-900 text-white min-h-screen pb-16">
+          <header className="border-b border-slate-800 bg-slate-950 py-8 px-4">
+            <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-blue-400 bg-blue-950 px-3 py-1 rounded-full border border-blue-800">
+                  実践マネジメント・ワークショップ ポータル
+                </span>
+                <h1 className="text-2xl md:text-3xl font-black mt-2 tracking-tight">
+                  自社を見つめ直し、利益を最大化する研修ツール群
+                </h1>
+                <p className="text-xs md:text-sm text-slate-400 mt-1">
+                  直感経営から脱却し、全社で動かす『数字×現場行動』の利益創出プラットフォーム
+                </p>
+              </div>
+              <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 text-xs text-slate-300">
+                収録コンテンツ：<strong className="text-white">全7モジュール</strong>
+              </div>
+            </div>
+          </header>
+
+          <main className="max-w-5xl mx-auto px-4 mt-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {menu.map(m => {
+                const Icon = m.icon;
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => onNav(m.id)}
+                    className="bg-slate-800 rounded-2xl p-5 border border-slate-700 hover:border-blue-500 cursor-pointer transition-all hover:-translate-y-1 shadow-md flex flex-col justify-between group"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className={`p-2.5 rounded-xl text-white ${m.color}`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-bold">{m.cat}</span>
+                      </div>
+                      <h3 className="text-base font-bold text-white group-hover:text-blue-400 transition-colors">
+                        {m.title}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                        {m.sub}
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-700 text-xs font-bold text-blue-400 flex justify-between items-center">
+                      <span>プレイする</span>
+                      <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // 共通サブヘッダー
+    function SubHeader({ title, sub, icon: Icon, onBack }) {
+      return (
+        <header className="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onBack}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold border border-slate-700"
+              >
+                <Home className="w-4 h-4 text-blue-400" />
+                <span>ポータルへ戻る</span>
+              </button>
+              <div className="border-l border-slate-700 pl-3">
+                <h2 className="text-sm md:text-base font-bold flex items-center gap-1.5">
+                  <Icon className="w-4 h-4 text-blue-400" />
+                  {title}
+                </h2>
+              </div>
+            </div>
+            <span className="text-[10px] text-slate-400 hidden sm:inline">{sub}</span>
+          </div>
+        </header>
+      );
+    }
+
+    // =========================================================================
+    // モジュール1：ゴム工場の逆転劇
+    // =========================================================================
+    function FactoryView({ onBack }) {
+      const [sel, setSel] = useState([]);
+      const [over, setOver] = useState(false);
+      const [bulk, setBulk] = useState(false);
+      const [settled, setSettled] = useState(false);
+
+      const toggle = (id) => setSel(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+      const currentOrders = FACTORY_ORDERS.filter(o => sel.includes(o.id));
+      const totalSales = currentOrders.reduce((s, o) => s + o.sales, 0);
+      const rawVc = currentOrders.reduce((s, o) => s + o.vc, 0);
+      const totalHours = currentOrders.reduce((s, o) => s + o.hours, 0);
+      const isOver = totalHours > 160;
+
+      const effectiveVc = bulk ? rawVc * 0.95 : rawVc;
+      const margin = totalSales - effectiveVc;
+      const fc = 300 + (over && isOver ? 100 : 0);
+      const op = margin - fc;
+      const arHold = Math.round(totalSales * 0.2);
+      const bulkCash = bulk ? 200 : 0;
+      const cash = 500 + op - arHold - bulkCash;
+      const isBroke = cash <= 0;
+
+      return (
+        <div>
+          <SubHeader title="ゴム工場の逆転劇" sub="事前・事後経営ゲーム" icon={Factory} onBack={onBack} />
+          <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+            {!settled ? (
+              <>
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-xl text-xs md:text-sm text-blue-900 leading-relaxed shadow-sm">
+                  <strong>社長、今月の受注案件と稼働方針を決めてください！</strong><br />
+                  手元現金<strong>500万円</strong>、固定費<strong>月300万円</strong>、定時枠は<strong>160時間</strong>です。
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                  <h3 className="font-bold text-sm text-slate-800">1. 受注案件の選択（複数選択可）</h3>
+                  <div className="grid md:grid-cols-3 gap-3">
+                    {FACTORY_ORDERS.map(o => {
+                      const isChecked = sel.includes(o.id);
+                      return (
+                        <div
+                          key={o.id}
+                          onClick={() => toggle(o.id)}
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                            isChecked ? 'border-blue-600 bg-blue-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded">案件 {o.id}</span>
+                            <span className="text-xs font-bold text-slate-500">{o.hours} 時間</span>
+                          </div>
+                          <h4 className="font-bold text-sm text-slate-900">{o.name}</h4>
+                          <p className="text-[11px] text-slate-500 mt-1">{o.desc}</p>
+                          <div className="mt-3 pt-2 border-t flex justify-between text-xs">
+                            <span>売上: <strong>{o.sales}万</strong></span>
+                            <span className="text-rose-600">変動費: <strong>{o.vc}万</strong></span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid md:grid-cols-2 gap-3">
+                  <label className={`p-4 rounded-xl border-2 cursor-pointer flex items-start gap-3 ${over ? 'bg-amber-50 border-amber-400' : 'border-slate-200'}`}>
+                    <input type="checkbox" checked={over} onChange={e => setOver(e.target.checked)} className="mt-1" />
+                    <div>
+                      <span className="font-bold text-sm block">残業・休日稼働を許可する</span>
+                      <span className="text-xs text-slate-500">160hを超えても生産可能ですが、【固定費が＋100万円】追加されます。</span>
+                    </div>
+                  </label>
+                  <label className={`p-4 rounded-xl border-2 cursor-pointer flex items-start gap-3 ${bulk ? 'bg-emerald-50 border-emerald-400' : 'border-slate-200'}`}>
+                    <input type="checkbox" checked={bulk} onChange={e => setBulk(e.target.checked)} className="mt-1" />
+                    <div>
+                      <span className="font-bold text-sm block">原料ゴムの「まとめ買い割引」を利用</span>
+                      <span className="text-xs text-slate-500">変動費5%引。ただし在庫先行で【現金200万円の前払い】が発生します。</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+                  <div className="flex gap-6 text-sm">
+                    <div><span className="text-xs text-slate-400 block">予定売上</span><span className="text-xl font-bold">{totalSales} 万円</span></div>
+                    <div><span className="text-xs text-slate-400 block">必要時間</span><span className={`text-xl font-bold ${isOver ? 'text-amber-400' : 'text-emerald-400'}`}>{totalHours} / 160 h</span></div>
+                  </div>
+                  <button
+                    disabled={sel.length === 0 || (isOver && !over)}
+                    onClick={() => setSettled(true)}
+                    className={`px-8 py-3.5 rounded-xl font-bold text-sm ${
+                      sel.length === 0 || (isOver && !over) ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg'
+                    }`}
+                  >
+                    今月の決算を確定する →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-6 animate-in fade-in">
+                <div className={`p-6 rounded-2xl border-2 ${isBroke ? 'bg-rose-50 border-rose-300 text-rose-900' : op > 200 ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-amber-50 border-amber-300 text-amber-900'}`}>
+                  <h3 className="text-xl font-black mb-1">
+                    {isBroke ? '⚠️ 【黒字倒産】手元資金がショートしました！' : op > 200 ? '🎉 大成功！売上を絞って超高収益を達成！' : '🤔 売上は立ちましたが、利益効率に課題あり'}
+                  </h3>
+                  <p className="text-xs md:text-sm opacity-90 leading-relaxed">
+                    {isBroke ? '帳簿上の利益が出ていても、売掛金の未回収や在庫の先払いで現金が底をつきました。これぞ黒字倒産です！' : op > 200 ? '工場の定時枠（160h）を高限界利益製品で埋め、残業固定費ゼロで最大の利益を残せました。' : '大口案件を受けすぎて残業代がかさみ、手元にほとんど利益が残りませんでした。'}
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2 text-xs md:text-sm">
+                    <h4 className="font-bold border-b pb-2 text-slate-700">損益計算書 (PL)</h4>
+                    <div className="flex justify-between"><span>売上高</span><span className="font-bold">{totalSales} 万円</span></div>
+                    <div className="flex justify-between text-rose-600"><span>変動費</span><span>- {Math.round(effectiveVc)} 万円</span></div>
+                    <div className="flex justify-between font-bold bg-blue-50 p-2 rounded text-blue-800"><span>限界利益</span><span>{Math.round(margin)} 万円</span></div>
+                    <div className="flex justify-between text-slate-500"><span>固定費</span><span>- {fc} 万円</span></div>
+                    <div className="flex justify-between font-bold border-t pt-2 text-base"><span>営業利益</span><span className={op >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{op >= 0 ? `+${op}` : op} 万円</span></div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2 text-xs md:text-sm">
+                    <h4 className="font-bold border-b pb-2 text-slate-700">資金繰り (Cash)</h4>
+                    <div className="flex justify-between"><span>期首現金</span><span className="font-bold">500 万円</span></div>
+                    <div className="flex justify-between"><span>営業利益</span><span>{op >= 0 ? `+${op}` : op} 万円</span></div>
+                    <div className="flex justify-between text-rose-600"><span>売掛金拘束 (売上の20%)</span><span>- {arHold} 万円</span></div>
+                    {bulk && <div className="flex justify-between text-rose-600"><span>まとめ買い在庫前払い</span><span>- 200 万円</span></div>}
+                    <div className="flex justify-between font-bold border-t pt-2 text-base bg-slate-50 p-2 rounded">
+                      <span>期末手元現金</span>
+                      <span className={cash > 0 ? 'text-emerald-600' : 'text-rose-600 font-black'}>{cash} 万円</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center pt-2">
+                  <button onClick={() => { setSel([]); setSettled(false); }} className="px-8 py-3 rounded-xl bg-slate-800 text-white font-bold text-xs shadow hover:bg-slate-700">
+                    もう一度戦略を立て直す
+                  </button>
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // モジュール2：固変分解クイズ
+    // =========================================================================
+    function QuizView({ onBack }) {
+      const [idx, setIdx] = useState(0);
+      const [selected, setSelected] = useState(null);
+      const [showFb, setShowFb] = useState(false);
+      const [score, setScore] = useState(0);
+      const [done, setDone] = useState(false);
+
+      const q = QUIZ_DATA[idx];
+
+      const handleAns = (ans) => {
+        if (selected) return;
+        const isCor = ans === q.a;
+        setSelected(ans);
+        setShowFb(true);
+        if (isCor) setScore(s => s + 1);
+      };
+
+      const handleNext = () => {
+        if (idx < QUIZ_DATA.length - 1) {
+          setIdx(i => i + 1);
+          setSelected(null);
+          setShowFb(false);
+        } else {
+          setDone(true);
+        }
+      };
+
+      return (
+        <div>
+          <SubHeader title="固変分解クイズ（実務版）" sub="パート1：勘定科目法" icon={HelpCircle} onBack={onBack} />
+          <main className="max-w-2xl mx-auto px-4 py-6">
+            {!done ? (
+              <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm space-y-6">
+                <div className="flex justify-between items-center text-xs font-bold text-slate-400 border-b pb-3">
+                  <span>第 {idx + 1} 問 / 10問中</span>
+                  <span>正解数: {score} 点</span>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-center min-h-[100px] flex items-center justify-center">
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900">{q.q}</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {['変動費', '固定費'].map(opt => {
+                    const isCor = opt === q.a;
+                    let style = 'bg-white border-slate-200 hover:border-slate-300';
+                    if (showFb) {
+                      if (isCor) style = 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-300';
+                      else if (selected === opt) style = 'border-rose-500 bg-rose-50 text-rose-800';
+                      else style = 'opacity-40 bg-slate-50';
+                    }
+                    return (
+                      <button
+                        key={opt}
+                        disabled={showFb}
+                        onClick={() => handleAns(opt)}
+                        className={`py-6 rounded-2xl border-4 font-black text-2xl transition-all ${style}`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {showFb && (
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-xs md:text-sm space-y-3 animate-in fade-in">
+                    {q.practical && (
+                      <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 font-medium">
+                        💡 <strong>現場と理屈のギャップ：</strong> {q.theory}
+                      </div>
+                    )}
+                    <p className="text-slate-700 leading-relaxed">
+                      <strong>🔍 なぜ「{q.a}」として扱うのか？：</strong><br />
+                      {q.exp}
+                    </p>
+                    <button onClick={handleNext} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800">
+                      {idx < QUIZ_DATA.length - 1 ? '次の問題へ進む →' : '結果を見る'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-6">
+                <Trophy className="w-16 h-16 text-amber-500 mx-auto" />
+                <h3 className="text-2xl font-black text-slate-900">クイズ完了！</h3>
+                <div className="text-4xl font-black text-blue-600">{score} / 10 問正解</div>
+                <button onClick={() => { setIdx(0); setSelected(null); setShowFb(false); setScore(0); setDone(false); }} className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl text-xs">
+                  もう一度挑戦する
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // モジュール3：購買改革シミュレーション
+    // =========================================================================
+    function PurchasingView({ onBack }) {
+      const [idx, setIdx] = useState(0);
+      const [sel, setSel] = useState(null);
+      const [showFb, setShowFb] = useState(false);
+      const [cash, setCash] = useState(500);
+      const [profit, setProfit] = useState(0);
+      const [done, setDone] = useState(false);
+
+      const q = PURCHASING_DATA[idx];
+
+      const handleSelect = (i) => {
+        setSel(i);
+        const o = q.opts[i];
+        setCash(c => c + o.c);
+        setProfit(p => p + o.p);
+        setShowFb(true);
+      };
+
+      const handleNext = () => {
+        if (idx < PURCHASING_DATA.length - 1) {
+          setIdx(i => i + 1);
+          setSel(null);
+          setShowFb(false);
+        } else {
+          setDone(true);
+        }
+      };
+
+      return (
+        <div>
+          <SubHeader title="購買改革シミュレーション" sub="打ち手①：仕入れコスト低減" icon={ShoppingCart} onBack={onBack} />
+          <main className="max-w-2xl mx-auto px-4 py-6">
+            {!done ? (
+              <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm space-y-6">
+                <div className="flex justify-between items-center text-xs font-bold border-b pb-3">
+                  <span className="bg-slate-900 text-white px-2.5 py-1 rounded-md">問 {idx + 1} / 5</span>
+                  <div className="flex gap-4">
+                    <span>利益: <strong className="text-emerald-600">{profit >= 0 ? `+${profit}` : profit}万</strong></span>
+                    <span>現金: <strong className="text-blue-600">{cash}万</strong></span>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 mb-2">{q.title}</h3>
+                  <p className="text-xs md:text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200 leading-relaxed font-medium">
+                    {q.desc}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {q.opts.map((opt, i) => (
+                    <button
+                      key={i}
+                      disabled={showFb}
+                      onClick={() => handleSelect(i)}
+                      className={`w-full text-left p-4 rounded-xl border-2 text-xs md:text-sm font-bold transition-all ${
+                        sel === i ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      {opt.text}
+                    </button>
+                  ))}
+                </div>
+
+                {showFb && (
+                  <div className={`p-5 rounded-2xl border-2 space-y-3 text-xs md:text-sm animate-in fade-in ${
+                    q.opts[sel].best ? 'bg-emerald-50 border-emerald-300 text-emerald-950' : 'bg-rose-50 border-rose-300 text-rose-950'
+                  }`}>
+                    <h4 className="font-black text-sm">{q.opts[sel].best ? '◎ 大正解！プロの購買判断' : '⚠️ 危険！現場や財務が崩壊します'}</h4>
+                    <p className="leading-relaxed">{q.opts[sel].fb}</p>
+                    <button onClick={handleNext} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800">
+                      {idx < PURCHASING_DATA.length - 1 ? '次の問題へ進む →' : '最終決算を見る'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-6">
+                <Trophy className="w-16 h-16 text-emerald-500 mx-auto" />
+                <h3 className="text-2xl font-black text-slate-900">購買改革 最終レポート</h3>
+                <div className="flex justify-center gap-6 text-sm">
+                  <div>獲得利益: <strong className="text-2xl block text-emerald-600">+{profit}万</strong></div>
+                  <div>期末現金: <strong className="text-2xl block text-blue-600">{cash}万</strong></div>
+                </div>
+                <button onClick={() => { setIdx(0); setSel(null); setShowFb(false); setCash(500); setProfit(0); setDone(false); }} className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl text-xs">
+                  もう一度挑戦する
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // モジュール4：プロダクトミックス体験
+    // =========================================================================
+    function ProductMixView({ onBack }) {
+      const [rA, setRA] = useState(70);
+      const [rB, setRB] = useState(25);
+      const [rC, setRC] = useState(5);
+
+      const sA = Math.round(1000 * (rA / 100));
+      const sB = Math.round(1000 * (rB / 100));
+      const sC = 1000 - sA - sB;
+
+      const mA = Math.round(sA * 0.15);
+      const mB = Math.round(sB * 0.50);
+      const mC = Math.round(sC * 0.75);
+      const totalM = mA + mB + mC;
+      const op = totalM - 300;
+
+      const handleSlider = (v) => {
+        setRA(v);
+        const rem = 100 - v;
+        setRB(Math.round(rem * 0.6));
+        setRC(rem - Math.round(rem * 0.6));
+      };
+
+      return (
+        <div>
+          <SubHeader title="プロダクトミックス体験" sub="同じ売上1000万円で利益激変スライダー" icon={PieChart} onBack={onBack} />
+          <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+              <div className="flex justify-between items-center pb-3 border-b">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">月商1,000万円固定の製品構成比スライダー</h3>
+                  <p className="text-xs text-slate-400">構成比を変えるだけで営業利益が赤字から＋300万円超へ跳ね上がります。</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-slate-400 block">営業利益</span>
+                  <span className={`text-2xl font-black ${op >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {op >= 0 ? `+${op}` : op} 万円
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-xs font-bold mb-1">
+                  <span className="text-rose-600">製品A（低粗利パッキン・限界利益率15%）比率: {rA}%</span>
+                  <span className="text-slate-500">B: {rB}% / C: {rC}%</span>
+                </div>
+                <input type="range" min="5" max="80" value={rA} onChange={e => handleSlider(parseInt(e.target.value))} className="w-full accent-rose-500 cursor-pointer h-2" />
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-3">
+                <button onClick={() => { setRA(70); setRB(25); setRC(5); }} className="p-3 rounded-xl border text-left hover:bg-slate-50">
+                  <span className="text-xs font-bold text-rose-600 block">① 従来型（量産依存）</span>
+                  <span className="text-xs text-slate-500">A:70% / 利益: ▲35万円</span>
+                </button>
+                <button onClick={() => { setRA(30); setRB(50); setRC(20); }} className="p-3 rounded-xl border text-left hover:bg-slate-50">
+                  <span className="text-xs font-bold text-blue-600 block">② 改善途上（バランス型）</span>
+                  <span className="text-xs text-slate-500">A:30% / 利益: ＋145万円</span>
+                </button>
+                <button onClick={() => { setRA(10); setRB(30); setRC(60); }} className="p-3 rounded-xl border text-left hover:bg-slate-50">
+                  <span className="text-xs font-bold text-emerald-600 block">③ 高収益シフト型（理想）</span>
+                  <span className="text-xs text-slate-500">A:10% / 利益: ＋315万円！</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs md:text-sm space-y-2">
+              <h4 className="font-bold border-b pb-2 text-slate-700">損益計算書 (PL)</h4>
+              <div className="flex justify-between"><span>売上高</span><span className="font-bold">1,000 万円</span></div>
+              <div className="flex justify-between text-rose-600"><span>変動費</span><span>- {1000 - totalM} 万円</span></div>
+              <div className="flex justify-between font-bold bg-blue-50 p-2 rounded text-blue-900"><span>全社限界利益</span><span>{totalM} 万円</span></div>
+              <div className="flex justify-between text-slate-500"><span>固定費</span><span>- 300 万円</span></div>
+              <div className="flex justify-between font-black text-base border-t pt-2"><span>営業利益</span><span className={op >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{op >= 0 ? `+${op}` : op} 万円</span></div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // モジュール5：技術提案型営業アドベンチャー
+    // =========================================================================
+    function SalesView({ onBack }) {
+      const [stg, setStg] = useState(0);
+      const [prob, setProb] = useState(25);
+      const [rate, setRate] = useState(40);
+      const [sel, setSel] = useState(null);
+      const [showFb, setShowFb] = useState(false);
+      const [done, setDone] = useState(false);
+
+      const cur = SALES_DATA[stg];
+
+      const handleSelect = (i) => {
+        setSel(i);
+        const o = cur.opts[i];
+        setProb(p => Math.max(0, Math.min(100, p + o.prob)));
+        setRate(r => Math.max(10, Math.min(85, r + o.rate)));
+        setShowFb(true);
+      };
+
+      const handleNext = () => {
+        if (stg < SALES_DATA.length - 1) {
+          setStg(s => s + 1);
+          setSel(null);
+          setShowFb(false);
+        } else {
+          setDone(true);
+        }
+      };
+
+      return (
+        <div>
+          <SubHeader title="技術提案型営業アドベンチャー" sub="打ち手②：AIDMA営業プロセス" icon={Compass} onBack={onBack} />
+          <main className="max-w-2xl mx-auto px-4 py-6">
+            {!done ? (
+              <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm space-y-6">
+                <div className="flex justify-between items-center text-xs font-bold border-b pb-3">
+                  <span className="bg-purple-600 text-white px-2.5 py-1 rounded-md">{cur.step}</span>
+                  <div className="flex gap-4">
+                    <span>受注確度: <strong className="text-purple-600">{prob}%</strong></span>
+                    <span>想定粗利率: <strong className="text-emerald-600">{rate}%</strong></span>
+                  </div>
+                </div>
+
+                <p className="text-xs md:text-sm text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 leading-relaxed font-medium">
+                  {cur.sit}
+                </p>
+
+                <div className="space-y-3">
+                  {cur.opts.map((opt, i) => (
+                    <button
+                      key={i}
+                      disabled={showFb}
+                      onClick={() => handleSelect(i)}
+                      className={`w-full text-left p-4 rounded-xl border-2 text-xs md:text-sm font-bold transition-all ${
+                        sel === i ? 'border-purple-600 bg-purple-50 text-purple-900' : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      {opt.text}
+                    </button>
+                  ))}
+                </div>
+
+                {showFb && (
+                  <div className={`p-5 rounded-2xl border-2 space-y-3 text-xs md:text-sm animate-in fade-in ${
+                    cur.opts[sel].best ? 'bg-emerald-50 border-emerald-300 text-emerald-950' : 'bg-rose-50 border-rose-300 text-rose-950'
+                  }`}>
+                    <p className="leading-relaxed font-medium">{cur.opts[sel].fb}</p>
+                    <button onClick={handleNext} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800">
+                      {stg < SALES_DATA.length - 1 ? '次の商談フェーズへ進む →' : '最終結果を見る'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-6">
+                <Trophy className="w-16 h-16 text-purple-600 mx-auto" />
+                <h3 className="text-2xl font-black text-slate-900">
+                  {prob >= 60 && rate >= 60 ? '🏆 満額成約！開発パートナーモデル達成！' : '⚠️ 下請け価格競争の罠に低迷'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {prob >= 60 && rate >= 60 ? '図面が出る前のレシピ提案と納期バリュープライシングにより、値引きゼロで限界利益率70%超を勝ち取りました！' : '図面待ちや安易な値引きにより、売上は取れても手元にお金が残らない結果となりました。'}
+                </p>
+                <button onClick={() => { setStg(0); setProb(25); setRate(40); setSel(null); setShowFb(false); setDone(false); }} className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl text-xs">
+                  もう一度挑戦する
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // モジュール6：ECRS原則マスター
+    // =========================================================================
+    function EcrsView({ onBack }) {
+      const [idx, setIdx] = useState(0);
+      const [sel, setSel] = useState(null);
+      const [showFb, setShowFb] = useState(false);
+      const [score, setScore] = useState(0);
+      const [done, setDone] = useState(false);
+
+      const q = ECRS_DATA[idx];
+
+      const handleAns = (k) => {
+        if (sel) return;
+        const isCor = k === q.ans;
+        setSel(k);
+        setShowFb(true);
+        if (isCor) setScore(s => s + 1);
+      };
+
+      const handleNext = () => {
+        if (idx < ECRS_DATA.length - 1) {
+          setIdx(i => i + 1);
+          setSel(null);
+          setShowFb(false);
+        } else {
+          setDone(true);
+        }
+      };
+
+      return (
+        <div>
+          <SubHeader title="ECRS（イクルス）原則マスター" sub="打ち手③：ムダ取り4原則" icon={Scissors} onBack={onBack} />
+          <main className="max-w-2xl mx-auto px-4 py-6">
+            {!done ? (
+              <div className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200 shadow-sm space-y-6">
+                <div className="flex justify-between items-center text-xs font-bold border-b pb-3">
+                  <span className="bg-amber-600 text-white px-2.5 py-1 rounded-md">{q.title}</span>
+                  <span>正解数: {score} 問</span>
+                </div>
+
+                <p className="text-xs md:text-sm text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 leading-relaxed font-medium">
+                  {q.sit}
+                </p>
+
+                {q.ans !== 'PRIORITY' ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { k: 'E', l: 'E：排除' },
+                      { k: 'C', l: 'C：結合' },
+                      { k: 'R', l: 'R：入替' },
+                      { k: 'S', l: 'S：簡素化' }
+                    ].map(item => (
+                      <button
+                        key={item.k}
+                        disabled={showFb}
+                        onClick={() => handleAns(item.k)}
+                        className="p-4 rounded-xl border-2 font-bold text-sm hover:bg-slate-50 text-center"
+                      >
+                        {item.l}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {[
+                      { k: 'PRIORITY', l: 'E（排除）→ C（結合）→ R（入替）→ S（簡素化）' },
+                      { k: 'W1', l: 'S（簡素化）→ R（入替）→ C（結合）→ E（排除）' },
+                      { k: 'W2', l: '思いついた簡単なものから順にやる' }
+                    ].map(opt => (
+                      <button
+                        key={opt.k}
+                        disabled={showFb}
+                        onClick={() => handleAns(opt.k)}
+                        className="w-full p-4 rounded-xl border-2 text-left text-xs md:text-sm font-bold hover:bg-slate-50"
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {showFb && (
+                  <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 text-xs md:text-sm space-y-3 animate-in fade-in">
+                    <h4 className="font-black">正解は「{q.name}」です！</h4>
+                    <p className="leading-relaxed">
+                      {q.ans === 'PRIORITY'
+                        ? '道具を買う（S）前に、まず工程そのものをなくせないか（E）を徹底的に考えるのが改善の鉄則です！'
+                        : 'ECRS（イクルス）の視点を持つことで、現場の無駄な作業を費用ゼロで消し去ることができます。'}
+                    </p>
+                    <button onClick={handleNext} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800">
+                      {idx < ECRS_DATA.length - 1 ? '次の問題へ進む →' : '結果を見る'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center space-y-6">
+                <Trophy className="w-16 h-16 text-amber-500 mx-auto" />
+                <h3 className="text-2xl font-black text-slate-900">クイズ完了！</h3>
+                <div className="text-4xl font-black text-amber-600">{score} / 5 問正解</div>
+                <button onClick={() => { setIdx(0); setSel(null); setShowFb(false); setScore(0); setDone(false); }} className="px-8 py-3 bg-slate-900 text-white font-bold rounded-xl text-xs">
+                  もう一度挑戦する
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // モジュール7：廃棄ゼロ化・返品コストシミュレーター
+    // =========================================================================
+    function DefectView({ onBack }) {
+      const [step, setStep] = useState(0);
+
+      const cur = DEFECT_STEPS.slice(0, step);
+      const extra = cur.reduce((s, x) => s + x.cost, 0);
+      const hours = cur.reduce((s, x) => s + x.hours, 0);
+      const profit = 15 - extra; // 正常時利益15万
+
+      return (
+        <div>
+          <SubHeader title="廃棄ゼロ化・返品コストシミュレーター" sub="打ち手③：返品ドミノ" icon={Flame} onBack={onBack} />
+          <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">産業機器向け特注パッキン（売上50万円 / 予定利益 ＋15万円）</h3>
+                <span className="text-xs text-rose-600 font-bold">⚠️ 配合表の読み間違いにより全数返品発生！</span>
+              </div>
+              <div className="flex gap-4 text-xs font-bold shrink-0">
+                <div>追加損失: <strong className="text-rose-600 text-base block">▲{extra}万</strong></div>
+                <div>浪費時間: <strong className="text-amber-600 text-base block">{hours}時間</strong></div>
+                <div>最終損益: <strong className={`text-base block ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{profit >= 0 ? `+${profit}` : profit}万</strong></div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+              <h4 className="font-bold text-slate-900 text-sm">不良品発生が引き起こす「悪夢の5連鎖」</h4>
+              <div className="space-y-3">
+                {DEFECT_STEPS.map((d, i) => {
+                  const triggered = i < step;
+                  return (
+                    <div key={d.step} className={`p-4 rounded-xl border-2 transition-all ${triggered ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 border-slate-200 opacity-50'}`}>
+                      <div className="flex justify-between font-bold text-xs md:text-sm">
+                        <span className="text-slate-900">{d.step}. {d.title}</span>
+                        <span className="text-rose-600">▲{d.cost}万円 / {d.hours}時間</span>
+                      </div>
+                      {triggered && <p className="text-xs text-slate-600 mt-2">{d.desc}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-2 flex justify-between items-center">
+                {step > 0 && (
+                  <button onClick={() => setStep(0)} className="text-xs font-bold text-slate-500 hover:text-slate-800">
+                    最初からやり直す
+                  </button>
+                )}
+                <div className="ml-auto">
+                  {step < DEFECT_STEPS.length ? (
+                    <button onClick={() => setStep(s => s + 1)} className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow">
+                      次の被害を進める（ドミノを倒す） →
+                    </button>
+                  ) : (
+                    <span className="text-xs font-bold text-rose-600 bg-rose-100 px-3 py-1.5 rounded-lg">すべての連鎖が完了しました</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // レンダリング実行
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
